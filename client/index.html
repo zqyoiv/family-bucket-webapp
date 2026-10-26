@@ -8,7 +8,9 @@
     />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- No apple-mobile-web-app-status-bar-style: since iOS 26.1 "black-translucent" makes iOS draw a
+         gradient scrim over the status bar that the page cannot remove. Without it the status bar
+         takes the page colour (blue, see vrbo-v2.css) and the page sits below it. -->
     <meta name="theme-color" content="#1b1f3a" />
     <title>Expedia Interaction Demo</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />

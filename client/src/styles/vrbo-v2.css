@@ -3298,40 +3298,65 @@ html.vrbo-kiosk-lock #root {
 /*
  * iOS Home Screen app (class added by useVrboFixedViewport): keep the lock's
  * no-scroll behaviour but drop position:fixed on html/body (fixed boxes are
- * clipped at the short 793px viewport) and size by 100vh, which is the true
- * screen height there.
+ * clipped at the short 793px viewport) and size by the dynamic viewport height.
+ *
+ * The page no longer opts into "black-translucent" (iOS 26.1+ paints a gradient over the
+ * status bar for it), so the Home Screen app now sits BELOW the status bar: 100dvh is
+ * exactly the visible page, while 100vh would include the status bar and push the bottom
+ * of the page off screen.
  */
 html.vrbo-kiosk-lock.vrbo-standalone-fill,
 html.vrbo-kiosk-lock.vrbo-standalone-fill body {
   position: relative;
   inset: auto;
-  height: 100vh;
-  min-height: 100vh;
+  height: 100dvh;
+  min-height: 100dvh;
 }
 
 html.vrbo-kiosk-lock.vrbo-standalone-fill #root {
-  height: 100vh;
+  height: 100dvh;
 }
 
 .vrbo-v2-device--phone.is-standalone:not(.is-framed) {
-  height: 100vh;
+  height: 100dvh;
 }
 
 /*
  * Standalone / Guided Access phone pages:
  * Keep page chrome white so the home-indicator strip is never brand-blue.
  * Top notch/status still reads blue via .vrbo-v2-phone__chrome + theme-color.
+ *
+ * Page background is blue on top, white at the bottom. The phone fills the page, so
+ * this only shows in a gap: a gap above the header (under the iOS status bar, which is
+ * translucent) must be brand blue, never white; a gap at the bottom stays white.
  */
 html:has(.vrbo-v2-device--phone:not(.is-framed)),
 body:has(.vrbo-v2-device--phone:not(.is-framed)),
 #root:has(.vrbo-v2-device--phone:not(.is-framed)) {
-  background: #ffffff;
+  background: linear-gradient(180deg, var(--blue, #0f51ec) 0, var(--blue, #0f51ec) 40%, #ffffff 40%);
 }
 
 html.vrbo-kiosk-lock:has(.vrbo-v2-device--phone:not(.is-framed)),
 html.vrbo-kiosk-lock:has(.vrbo-v2-device--phone:not(.is-framed)) body,
 html.vrbo-kiosk-lock:has(.vrbo-v2-device--phone:not(.is-framed)) #root {
-  background: #ffffff;
+  background: linear-gradient(180deg, var(--blue, #0f51ec) 0, var(--blue, #0f51ec) 40%, #ffffff 40%);
+}
+
+/*
+ * Solid blue strip fixed at the very top. iOS colours the (opaque) status bar from a
+ * REAL fixed element found by a hit test at the top centre, so it must be an actual element
+ * (not a pseudo-element) and must NOT be pointer-events:none (hit tests skip those).
+ * It needs to be >= 10px tall, >= 80% wide, solid colour, within 4px of the top edge.
+ * Nothing interactive lives in the top 12px of the page (blue header area).
+ */
+.vrbo-v2-statusbar-cap {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: max(env(safe-area-inset-top, 0px), 12px);
+  background-color: #0f51ec;
+  z-index: 2147483000;
 }
 
 .vrbo-v2-device {
@@ -3356,7 +3381,8 @@ html.vrbo-kiosk-lock:has(.vrbo-v2-device--phone:not(.is-framed)) #root {
 }
 
 .vrbo-v2-device--phone:not(.is-framed) {
-background: #ffffff;
+  /* Same split as the page: blue above, white below (see the standalone note above). */
+  background: linear-gradient(180deg, var(--blue, #0f51ec) 0, var(--blue, #0f51ec) 40%, #ffffff 40%);
   height: 100dvh;
   min-height: 0;
   --vrbo-safe-top: env(safe-area-inset-top, 0px);
@@ -5129,7 +5155,10 @@ body:has(.vrbo-v2-device--phone.is-framed),
 /* Real devices: extend the header to both edges, place content below iOS
    chrome, and let the feed use the remaining height. Figma previews stay fixed. */
 .vrbo-v2-device--phone:not(.is-framed) .vrbo-v2-phone__chrome {
-  height: max(31.44px, calc(var(--vrbo-safe-top) / var(--phone-scale) + 8px));
+  /* The Home Screen app no longer runs under a translucent status bar (that adds an iOS 26.1+
+     gradient), so the page already starts below the status bar. Do NOT add the safe-area inset
+     again; keep only a small gap above the header. */
+  height: 8px;
 }
 
 .vrbo-v2-device--phone:not(.is-framed) .vrbo-v2-phone__panel--chat .vrbo-v2-phone__feed {

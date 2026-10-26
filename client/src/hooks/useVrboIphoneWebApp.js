@@ -3,7 +3,8 @@ import { useEffect } from "react";
 const APPLE_METAS = [
   { name: "apple-mobile-web-app-capable", content: "yes" },
   { name: "mobile-web-app-capable", content: "yes" },
-  { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+  // No status-bar-style meta on purpose: "black-translucent" adds an iOS 26.1+ gradient
+  // scrim over the status bar that cannot be removed from the page.
 ];
 
 function upsertMeta(name, content) {

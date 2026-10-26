@@ -588,6 +588,7 @@ export function GuestPhonePage({ guestId, compareLayout = false } = {}) {
     <div
       className={`vrbo-v2-device vrbo-v2-device--phone${framed ? " is-framed" : ""}${standalone ? " is-standalone" : ""}`}
     >
+      {!framed ? <div className="vrbo-v2-statusbar-cap" aria-hidden="true" /> : null}
       {compare && !standalone ? (
         <button
           type="button"
