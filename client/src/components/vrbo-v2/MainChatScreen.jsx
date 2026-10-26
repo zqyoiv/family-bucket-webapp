@@ -96,7 +96,15 @@ export default function MainChatScreen({
     fresh.forEach((message) => seen.add(message.id));
 
     fresh.forEach((message) => {
-      if (message.kind === "property") playSharedVrboSound("propertyText");
+      // Hotel card = property-text; it never also plays text-appear.
+      if (message.kind === "property") {
+        playSharedVrboSound("propertyText");
+        return;
+      }
+      // Jamie's opening message (phase "intro") is the only silent text message.
+      if (message.phase === "intro") return;
+      // Every other text message (preferences, Jamie's summary, finale replies) = text-appear.
+      if (message.text) playSharedVrboSound("textAppear");
     });
   }, [messages, runId, hearSounds]);
 
