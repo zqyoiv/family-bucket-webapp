@@ -255,7 +255,6 @@ export default function RankingScreen({
   hearSounds = false,
 }) {
   const stageReadyRef = useRef(false);
-  const finaleReadyRef = useRef(false);
   const pullingReady = useDelayedTrue(allSubmitted && plannerReady, PULLING_DELAY_MS);
 
   useEffect(() => {
@@ -269,16 +268,6 @@ export default function RankingScreen({
       playSharedVrboSound("textAppear");
     }
   }, [stage, hearSounds]);
-
-  useEffect(() => {
-    if (!hearSounds) return;
-    if (!finaleReadyRef.current) {
-      finaleReadyRef.current = true;
-      return;
-    }
-    // Hawaii Trip finale panel enters.
-    if (celebrating) playSharedVrboSound("celebration");
-  }, [celebrating, hearSounds]);
 
   if (celebrating) {
     return (

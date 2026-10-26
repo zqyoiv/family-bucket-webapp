@@ -1,5 +1,4 @@
 const SOUNDS = {
-  celebration: "/sound/vrbo/celebration.wav",
   confirmProperty: "/sound/vrbo/confirm-property.wav",
   sendProperty: "/sound/vrbo/send-property.wav",
   tapProperty: "/sound/vrbo/tap-property.wav",
