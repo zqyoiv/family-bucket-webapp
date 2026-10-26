@@ -4,6 +4,7 @@ import copy from "../../data/vrbo-v2/copy.json";
 import users from "../../data/vrbo-v2/users.json";
 import { assembleGuestParts, partsToText, sharedPhraseBank } from "@shared/vrboChatCopy.js";
 import { createMessageMotionController } from "./chatMotion.js";
+import { preloadVrboPhoneImages } from "../../lib/preloadVrboHotelImages.js";
 import PreferenceCard from "./PreferenceCard.jsx";
 import { playVrboSound } from "./vrboSound.js";
 import PropertyCard from "./PropertyCard.jsx";
@@ -360,6 +361,11 @@ export default function GuestPhone({
 }) {
   const [draftName, setDraftName] = useState("");
 
+  // Chip images are large; fetch + decode them as soon as the phone opens (not on first tap).
+  useEffect(() => {
+    preloadVrboPhoneImages();
+  }, []);
+
   useEffect(() => {
     setDraftName("");
   }, [runId, user.id]);
@@ -495,7 +501,7 @@ export default function GuestPhone({
                     return (
                         <PreferenceCard
                           key={preference.id}
-                          preference={{ ...preference, image: `/images/Vrbo-Images/mobile/preferences/${preference.id}.${preference.id === "big-kitchen" ? "jpg" : "png"}` }}
+                          preference={{ ...preference, image: `/images/Vrbo-Images/mobile/preferences/${preference.id}.webp` }}
                           variant="chip"
                           selected={selected}
                           disabled={!selected && atLimit}
