@@ -95,7 +95,6 @@ export default function MainChatScreen({
     const fresh = list.filter((message) => message.id && !seen.has(message.id));
     fresh.forEach((message) => seen.add(message.id));
 
-    // Only the shared property card makes a sound. Text messages are silent.
     fresh.forEach((message) => {
       if (message.kind === "property") playSharedVrboSound("propertyText");
     });

@@ -5,6 +5,7 @@ const SOUNDS = {
   tapAmenity: "/sound/vrbo/tap-amenity.wav",
   tapSearch: "/sound/vrbo/tap-search.wav",
   propertyText: "/sound/vrbo/property-text.wav",
+  textAppear: "/sound/vrbo/text-appear.wav",
 };
 
 const clips = new Map();
