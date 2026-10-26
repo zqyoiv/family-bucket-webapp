@@ -95,18 +95,9 @@ export default function MainChatScreen({
     const fresh = list.filter((message) => message.id && !seen.has(message.id));
     fresh.forEach((message) => seen.add(message.id));
 
+    // Only the shared property card makes a sound. Text messages are silent.
     fresh.forEach((message) => {
-      if (message.kind === "property") {
-        // Shared property card landing in the group chat (not text-appear).
-        playSharedVrboSound("propertyText");
-        return;
-      }
-      if (message.phase === "preference") {
-        playSharedVrboSound("textAppear");
-        return;
-      }
-      // Plain text (including replies that name the property) = text-appear.
-      if (message.text) playSharedVrboSound("textAppear");
+      if (message.kind === "property") playSharedVrboSound("propertyText");
     });
   }, [messages, runId, hearSounds]);
 

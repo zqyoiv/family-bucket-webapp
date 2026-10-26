@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import chatScript from "../../data/vrbo-v2/chatScript.json";
 import copy from "../../data/vrbo-v2/copy.json";
 import properties from "../../data/vrbo-v2/properties.json";
 import users from "../../data/vrbo-v2/users.json";
 import OpeningLoop from "./OpeningLoop.jsx";
 import { StayShowcase } from "./StayViews.jsx";
-import { playSharedVrboSound, playTapSearchSound } from "./vrboSound.js";
+import { playTapSearchSound } from "./vrboSound.js";
 
 const FINALE_BG_SRC = "/images/Vrbo-Images/final-bg.jpg";
 
@@ -254,20 +254,7 @@ export default function RankingScreen({
   actions,
   hearSounds = false,
 }) {
-  const stageReadyRef = useRef(false);
   const pullingReady = useDelayedTrue(allSubmitted && plannerReady, PULLING_DELAY_MS);
-
-  useEffect(() => {
-    if (!hearSounds) return;
-    if (!stageReadyRef.current) {
-      stageReadyRef.current = true;
-      return;
-    }
-    // The results (property) page is intentionally silent.
-    if (stage === "summary" || stage === "searching") {
-      playSharedVrboSound("textAppear");
-    }
-  }, [stage, hearSounds]);
 
   if (celebrating) {
     return (

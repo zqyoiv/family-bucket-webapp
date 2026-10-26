@@ -5,7 +5,6 @@ const SOUNDS = {
   tapAmenity: "/sound/vrbo/tap-amenity.wav",
   tapSearch: "/sound/vrbo/tap-search.wav",
   propertyText: "/sound/vrbo/property-text.wav",
-  textAppear: "/sound/vrbo/text-appear.wav",
 };
 
 const clips = new Map();
@@ -177,7 +176,7 @@ function start(id, { allowTapSearch = false } = {}) {
 /** Blue Search button only. */
 export function playTapSearchSound() {
   start("tapSearch", { allowTapSearch: true });
-  suppressFollowups(["textAppear", "sendProperty", "propertyText"], 4000);
+  suppressFollowups(["sendProperty", "propertyText"], 4000);
 }
 
 /** Sound for the screen that was just touched. Later sounds from that same action stay quiet. */
