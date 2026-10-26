@@ -96,6 +96,8 @@ export default function MainChatScreen({
     fresh.forEach((message) => seen.add(message.id));
 
     fresh.forEach((message) => {
+      // The opening Jamie message should enter silently.
+      if (message.phase === "intro") return;
       if (message.kind === "property") {
         // Shared property card landing in the group chat (not text-appear).
         playSharedVrboSound("propertyText");
