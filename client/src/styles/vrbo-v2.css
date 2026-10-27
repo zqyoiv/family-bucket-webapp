@@ -1962,6 +1962,26 @@
   overflow: hidden;
 }
 
+/* Invisible restart hotspot, top-right of the hotel results screen (design px → cqw/cqh). */
+.vrbo-v2-rank__restart-hotspot {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 60;
+  width: calc(240 / var(--design-w, 2160) * 100cqw);
+  height: calc(160 / var(--design-h, 3840) * 100cqh);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: transparent;
+  opacity: 0;
+  cursor: default;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+
 .vrbo-v2-showcase {
   --design-w: 2160;
   --design-h: 3840;

@@ -259,6 +259,7 @@ function VrboDemo() {
               <p className="vrbo-v2-display__label">{copy.screenLabels.ranking}</p>
               <div className="vrbo-v2-display__body">
                 <RankingScreen
+                  key={runId}
                   stage={stage}
                   summaryText={summaryText}
                   results={results}
@@ -436,7 +437,9 @@ export function VrboRightPage({ compareLayout = false } = {}) {
   });
   const live = (
     <ScaledDisplayCanvas>
+      {/* key=runId: every restart remounts Display 2 so the opening loop starts from frame 1. */}
       <RankingScreen
+        key={state.runId ?? 0}
         stage={state.stage}
         summaryText={state.summaryText}
         results={state.results}

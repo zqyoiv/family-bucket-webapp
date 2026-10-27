@@ -51,6 +51,16 @@ const START_OFFSET_S = {
   tapAmenity: 0.036,
 };
 
+/**
+ * Per-sound loudness multiplier (Web Audio gain; 1 = file as recorded).
+ * Search button + "send property to group chat" both play tapSearch.
+ */
+const GAIN = {
+  tapSearch: 2,
+  confirmProperty: 2,
+  sendProperty: 2,
+};
+
 let ctx = null;
 const buffers = new Map();
 const loading = new Map();
@@ -136,7 +146,27 @@ function playBuffer(id, buffer) {
   }
   const source = context.createBufferSource();
   source.buffer = buffer;
-  source.connect(context.destination);
+  const gainValue = GAIN[id] ?? 1;
+  if (gainValue !== 1) {
+    const gain = context.createGain();
+    gain.gain.value = gainValue;
+    source.connect(gain);
+    if (gainValue > 1 && typeof context.createDynamicsCompressor === "function") {
+      // tap-search peaks near 0.64 FS, so 2x would clip. Limit the top end instead.
+      const limiter = context.createDynamicsCompressor();
+      limiter.threshold.value = -2;
+      limiter.knee.value = 0;
+      limiter.ratio.value = 20;
+      limiter.attack.value = 0.001;
+      limiter.release.value = 0.05;
+      gain.connect(limiter);
+      limiter.connect(context.destination);
+    } else {
+      gain.connect(context.destination);
+    }
+  } else {
+    source.connect(context.destination);
+  }
   source.onended = () => {
     if (playing.get(id) === source) playing.delete(id);
   };

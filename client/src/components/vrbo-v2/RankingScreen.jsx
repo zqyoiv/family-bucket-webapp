@@ -239,6 +239,23 @@ function FinaleLockedPanel({
   );
 }
 
+/**
+ * Invisible restart hotspot, top-right of Display 2 on every stage (opening, waiting, summary,
+ * searching, results, finale). Same action as the BA Restart button (`vrbo-v2:reset` →
+ * reset("manual")), so Hyperion logging matches.
+ */
+function RestartHotspot({ onReset }) {
+  return (
+    <button
+      type="button"
+      className="vrbo-v2-rank__restart-hotspot"
+      aria-label="Restart experience"
+      tabIndex={-1}
+      onClick={() => onReset?.()}
+    />
+  );
+}
+
 export default function RankingScreen({
   stage,
   summaryText,
@@ -265,6 +282,7 @@ export default function RankingScreen({
           joined={joined}
           displayNames={displayNames}
         />
+        <RestartHotspot onReset={actions?.reset} />
       </div>
     );
   }
@@ -310,6 +328,8 @@ export default function RankingScreen({
           actions={actions}
         />
       ) : null}
+
+      <RestartHotspot onReset={actions?.reset} />
     </div>
   );
 }
