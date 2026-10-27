@@ -1,9 +1,48 @@
 #Requires -Version 5.1
 # Start the Family Bucket dev server and open Vrbo left/right
-# in borderless fullscreen (kiosk) windows on monitor 1 and monitor 2.
+# in borderless fullscreen (kiosk) windows:
+#   vrbo-left  -> 2nd display to the right of the main screen
+#   vrbo-right -> 1st display to the right of the main screen
 
 $ErrorActionPreference = "Stop"
 $LogPath = Join-Path $env:TEMP "vrbo-demo-launch.log"
+
+# Per-monitor DPI awareness MUST be set before System.Windows.Forms is loaded.
+# Without it, mixed-DPI monitors report scaled (virtual) sizes/positions, and
+# Chrome's --window-position then lands both windows on the same screen.
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+using System.Text;
+
+public static class VrboWin {
+  public delegate bool EnumProc(IntPtr hWnd, IntPtr lParam);
+
+  [DllImport("user32.dll")] public static extern bool SetProcessDpiAwarenessContext(IntPtr value);
+  [DllImport("user32.dll")] public static extern bool EnumWindows(EnumProc proc, IntPtr lParam);
+  [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern int GetClassName(IntPtr hWnd, StringBuilder sb, int max);
+  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid);
+  [DllImport("user32.dll")] public static extern bool SetWindowPos(
+    IntPtr hWnd, IntPtr after, int x, int y, int cx, int cy, uint flags);
+
+  public static IntPtr FindChromeWindow(uint pid) {
+    IntPtr found = IntPtr.Zero;
+    EnumWindows(delegate (IntPtr h, IntPtr l) {
+      if (!IsWindowVisible(h)) return true;
+      uint p; GetWindowThreadProcessId(h, out p);
+      if (p != pid) return true;
+      StringBuilder sb = new StringBuilder(256);
+      GetClassName(h, sb, 256);
+      if (sb.ToString() == "Chrome_WidgetWin_1") { found = h; return false; }
+      return true;
+    }, IntPtr.Zero);
+    return found;
+  }
+}
+"@
+# -4 = DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
+[VrboWin]::SetProcessDpiAwarenessContext([IntPtr]-4) | Out-Null
 
 function Write-Step([string]$Message) {
   $line = "[vrbo-demo] $Message"
@@ -79,20 +118,6 @@ try {
     throw "Port $PortToCheck did not become ready within ${TimeoutSec}s."
   }
 
-  function Get-ScreenByDisplayNumber {
-    param(
-      [System.Windows.Forms.Screen[]]$Screens,
-      [int]$Number
-    )
-    $match = $Screens | Where-Object { $_.DeviceName -match ("DISPLAY{0}$" -f $Number) } | Select-Object -First 1
-    if ($match) { return $match }
-    # Fallback: 1-based index in left-to-right order
-    $ordered = @($Screens | Sort-Object { $_.Bounds.X }, { $_.Bounds.Y })
-    $idx = $Number - 1
-    if ($idx -ge 0 -and $idx -lt $ordered.Count) { return $ordered[$idx] }
-    return $null
-  }
-
   function Get-MonitorBounds {
     Add-Type -AssemblyName System.Windows.Forms
     $screens = [System.Windows.Forms.Screen]::AllScreens
@@ -100,19 +125,30 @@ try {
       throw "No displays detected."
     }
 
-    # Windows display numbers: 2 → vrbo-right, 3 → vrbo-left (reversed vs Expedia).
-    $monitorForRight = Get-ScreenByDisplayNumber -Screens $screens -Number 2
-    $monitorForLeft = Get-ScreenByDisplayNumber -Screens $screens -Number 3
-    if (-not $monitorForRight) { throw "Display 2 not found. Connected: $($screens.DeviceName -join ', ')" }
-    if (-not $monitorForLeft) { throw "Display 3 not found. Connected: $($screens.DeviceName -join ', ')" }
+    # Windows device names (\\.\DISPLAY5, ...) are NOT stable, so pick by physical
+    # position: the monitors to the right of the main screen, nearest first.
+    #   1st to the right of main -> vrbo-right (search)
+    #   2nd to the right of main -> vrbo-left  (chat)
+    $primary = $screens | Where-Object { $_.Primary } | Select-Object -First 1
+    $rightOfMain = @(
+      $screens |
+        Where-Object { -not $_.Primary -and $_.Bounds.X -ge $primary.Bounds.X } |
+        Sort-Object { $_.Bounds.X }, { $_.Bounds.Y }
+    )
+    if ($rightOfMain.Count -lt 2) {
+      throw "Need 2 displays to the right of the main screen (found $($rightOfMain.Count)). Connected: $(($screens | ForEach-Object { $_.DeviceName }) -join ', ')"
+    }
+
+    $monitorForRight = $rightOfMain[0]
+    $monitorForLeft = $rightOfMain[1]
 
     return @{
-      Monitor2 = $monitorForRight.Bounds
-      Monitor3 = $monitorForLeft.Bounds
-      Count    = $screens.Count
-      Labels   = @{
-        Monitor2 = $monitorForRight.DeviceName
-        Monitor3 = $monitorForLeft.DeviceName
+      Left  = $monitorForLeft.Bounds
+      Right = $monitorForRight.Bounds
+      Count = $screens.Count
+      Labels = @{
+        Left  = $monitorForLeft.DeviceName
+        Right = $monitorForRight.DeviceName
       }
     }
   }
@@ -154,7 +190,8 @@ try {
       New-Item -ItemType Directory -Path $UserDataDir | Out-Null
     }
 
-    # Oversize slightly — Chrome kiosk + DPI scaling often leaves a 1px edge gap.
+    # Size/position here are only a starting hint (Chrome reads them in scaled units).
+    # The window is moved to the exact physical monitor rect after launch.
     $w = [Math]::Max(1, $Bounds.Width + 4)
     $h = [Math]::Max(1, $Bounds.Height + 4)
     $argList = @(
@@ -171,7 +208,41 @@ try {
       $Url
     )
 
-    Start-Process -FilePath $Browser -ArgumentList $argList | Out-Null
+    $proc = Start-Process -FilePath $Browser -ArgumentList $argList -PassThru
+    Move-WindowToMonitor -ProcessId $proc.Id -Bounds $Bounds -Label $Url
+  }
+
+  # Chrome ignores/misreads --window-position on mixed-DPI setups, so place the
+  # window ourselves in physical pixels (we are per-monitor DPI aware).
+  function Move-WindowToMonitor {
+    param(
+      [int]$ProcessId,
+      [System.Drawing.Rectangle]$Bounds,
+      [string]$Label
+    )
+    $SWP_NOZORDER = 0x0004
+    $SWP_SHOWWINDOW = 0x0040
+    $hwnd = [IntPtr]::Zero
+    $deadline = (Get-Date).AddSeconds(20)
+    while ((Get-Date) -lt $deadline) {
+      $hwnd = [VrboWin]::FindChromeWindow([uint32]$ProcessId)
+      if ($hwnd -ne [IntPtr]::Zero) { break }
+      Start-Sleep -Milliseconds 200
+    }
+    if ($hwnd -eq [IntPtr]::Zero) {
+      Write-Step "WARN: no Chrome window found for $Label (pid $ProcessId); leaving placement to Chrome."
+      return
+    }
+    # Re-apply a few times: kiosk/fullscreen startup can nudge the window after first show.
+    for ($i = 0; $i -lt 6; $i++) {
+      [VrboWin]::SetWindowPos(
+        $hwnd, [IntPtr]::Zero,
+        $Bounds.X, $Bounds.Y, $Bounds.Width, $Bounds.Height,
+        ($SWP_NOZORDER -bor $SWP_SHOWWINDOW)
+      ) | Out-Null
+      Start-Sleep -Milliseconds 400
+    }
+    Write-Step ("Placed {0} at {1},{2} {3}x{4}" -f $Label, $Bounds.X, $Bounds.Y, $Bounds.Width, $Bounds.Height)
   }
 
   Write-Step "Repo: $RepoRoot"
@@ -181,18 +252,18 @@ try {
   Write-Step "Browser: $browser"
 
   $monitors = Get-MonitorBounds
-  $m2 = $monitors.Monitor2
-  $m3 = $monitors.Monitor3
-  Write-Step ("Monitor 2 ({0}): {1}x{2} at {3},{4} → vrbo-right" -f $monitors.Labels.Monitor2, $m2.Width, $m2.Height, $m2.X, $m2.Y)
-  Write-Step ("Monitor 3 ({0}): {1}x{2} at {3},{4} → vrbo-left" -f $monitors.Labels.Monitor3, $m3.Width, $m3.Height, $m3.X, $m3.Y)
+  $leftBounds = $monitors.Left
+  $rightBounds = $monitors.Right
+  Write-Step ("1st right of main ({0}): {1}x{2} at {3},{4} → vrbo-right" -f $monitors.Labels.Right, $rightBounds.Width, $rightBounds.Height, $rightBounds.X, $rightBounds.Y)
+  Write-Step ("2nd right of main ({0}): {1}x{2} at {3},{4} → vrbo-left" -f $monitors.Labels.Left, $leftBounds.Width, $leftBounds.Height, $leftBounds.X, $leftBounds.Y)
 
   Start-DevServerIfNeeded
 
-  Write-Step "Opening vrbo-right on monitor 2 (kiosk)..."
-  Start-KioskWindow -Browser $browser -Url $RightUrl -UserDataDir $RightProfile -Bounds $monitors.Monitor2
+  Write-Step "Opening vrbo-left on the 2nd display right of main (kiosk)..."
+  Start-KioskWindow -Browser $browser -Url $LeftUrl -UserDataDir $LeftProfile -Bounds $monitors.Left
   Start-Sleep -Milliseconds 700
-  Write-Step "Opening vrbo-left on monitor 3 (kiosk)..."
-  Start-KioskWindow -Browser $browser -Url $LeftUrl -UserDataDir $LeftProfile -Bounds $monitors.Monitor3
+  Write-Step "Opening vrbo-right on the 1st display right of main (kiosk)..."
+  Start-KioskWindow -Browser $browser -Url $RightUrl -UserDataDir $RightProfile -Bounds $monitors.Right
 
   Write-Step "Done. Press Esc in a kiosk window to exit that window."
   exit 0

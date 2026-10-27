@@ -1,4 +1,6 @@
 ' Double-click launcher for the Vrbo dual-monitor demo.
+'   vrbo-left  -> 2nd display to the right of the main screen
+'   vrbo-right -> 1st display to the right of the main screen
 Option Explicit
 
 Dim shell, fso, scriptDir, ps1, cmd, exitCode

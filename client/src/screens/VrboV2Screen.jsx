@@ -457,7 +457,6 @@ export function VrboRightPage({ compareLayout = false } = {}) {
   if (!compareLayout) {
     return (
       <div className="vrbo-v2-device vrbo-v2-device--display">
-        <RestartControl onReset={actions.reset} />
         <div className="vrbo-v2-device__stage vrbo-v2-device__stage--display-live">{live}</div>
       </div>
     );
@@ -465,7 +464,6 @@ export function VrboRightPage({ compareLayout = false } = {}) {
 
   return (
     <div className="vrbo-v2-device vrbo-v2-device--display">
-      <RestartControl onReset={actions.reset} />
       <div className="vrbo-v2-device__stage vrbo-v2-device__stage--display-compare">
         <div className="vrbo-v2-displayFrame">
           {live}
