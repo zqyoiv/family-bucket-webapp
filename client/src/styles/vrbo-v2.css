@@ -3400,6 +3400,37 @@ html.vrbo-kiosk-lock:has(.vrbo-v2-device--phone:not(.is-framed)) #root {
   container-type: size;
 }
 
+/*
+ * Guest phones: no text selection, no Copy / Look Up / Share callout, no image save/drag.
+ * Covers /vrbo-ip1..3 and the phone frames on /vrbo-v2. iOS Safari needs the -webkit- forms.
+ */
+.vrbo-v2-device--phone,
+.vrbo-v2-device--phone *,
+.vrbo-v2-phone,
+.vrbo-v2-phone * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.vrbo-v2-device--phone img,
+.vrbo-v2-phone img,
+.vrbo-v2-device--phone a,
+.vrbo-v2-phone a {
+  -webkit-user-drag: none;
+  user-drag: none;
+}
+
+/* The name field must stay typeable (iOS will not focus an input that is user-select:none). */
+.vrbo-v2-device--phone input,
+.vrbo-v2-device--phone textarea,
+.vrbo-v2-phone input,
+.vrbo-v2-phone textarea {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: none;
+}
+
 .vrbo-v2-device--phone:not(.is-framed) {
   /* Same split as the page: blue above, white below (see the standalone note above). */
   background: linear-gradient(180deg, var(--blue, #0f51ec) 0, var(--blue, #0f51ec) 40%, #ffffff 40%);
@@ -3431,6 +3462,26 @@ html.vrbo-kiosk-lock:has(.vrbo-v2-device--phone:not(.is-framed)) #root {
   left: auto;
   bottom: auto;
   z-index: 5;
+}
+
+/* Invisible top-right restart on Display 1 (/vrbo-left); sized as a share of the screen. */
+.vrbo-v2-device__restart-hotspot {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 60;
+  width: 11%;
+  height: 4%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: transparent;
+  opacity: 0;
+  cursor: default;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
 }
 
 .vrbo-v2-device__canvas {

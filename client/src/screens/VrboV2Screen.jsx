@@ -13,6 +13,7 @@ import { VRBO_UI } from "../config/vrboUi.js";
 import useLandscapeGate from "../hooks/useLandscapeGate.js";
 import useVrboHyperionDevice, { VGC_PHONE_BY_GUEST } from "../hooks/useVrboHyperionDevice.js";
 import useVrboIphoneWebApp from "../hooks/useVrboIphoneWebApp.js";
+import useVrboNoTextSelection from "../hooks/useVrboNoTextSelection.js";
 import useVrboSessionStartOnActivity from "../hooks/useVrboSessionStartOnActivity.js";
 import useVrboV2Session, { guests } from "../hooks/useVrboV2Session.js";
 import { buildStayCardTitle } from "@shared/vrboStayCopy.js";
@@ -136,13 +137,16 @@ function CursorHighlight({ enabled }) {
   );
 }
 
+/** Display 1 (/vrbo-left): same top-right restart as before, but invisible — no label. */
 function RestartControl({ onReset }) {
   return (
-    <div className="vrbo-v2-stage__controls">
-      <button type="button" className="vrbo-v2-stage__restart" onClick={onReset}>
-        {copy.stage.restart}
-      </button>
-    </div>
+    <button
+      type="button"
+      className="vrbo-v2-device__restart-hotspot"
+      aria-label="Restart experience"
+      tabIndex={-1}
+      onClick={onReset}
+    />
   );
 }
 
@@ -509,6 +513,7 @@ export function GuestPhonePage({ guestId, compareLayout = false } = {}) {
     (frameParam === "1" || (guestId === "sarah" && frameParam !== "0"));
   const webApp = VRBO_IPHONE_WEBAPP[guestId];
   useVrboIphoneWebApp(webApp ?? {});
+  useVrboNoTextSelection(true);
   useVrboHyperionDevice(VGC_PHONE_BY_GUEST[guestId] ?? null);
   const { state, actions } = useVrboV2Session({ syncOnly: true });
   const {
